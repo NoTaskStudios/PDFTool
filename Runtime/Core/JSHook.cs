@@ -5,7 +5,7 @@ using Syncfusion.Drawing;
 using Syncfusion.Pdf;
 using Syncfusion.Pdf.Graphics;
 
-namespace Pdf.Utils
+namespace Pdf.Core
 {
 	public abstract class JsHook : MonoBehaviour
 	{
