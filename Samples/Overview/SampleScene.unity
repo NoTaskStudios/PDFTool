@@ -721,6 +721,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 14d9302608c430a46af5859cddfa7537, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _fileName: Comprovante
+  _cellSize: 0
   _mine: {fileID: 2800000, guid: 1429746780ec8524eb7d28681ab57875, type: 3}
   _hay: {fileID: 2800000, guid: 466931a5879e2d946968c647c512fd52, type: 3}
 --- !u!1660057539 &9223372036854775807
