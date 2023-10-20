@@ -7,12 +7,18 @@ using Syncfusion.Pdf;
 using Syncfusion.Pdf.Graphics;
 using UnityEngine;
 
-namespace Pdf.Core
+namespace PDFTool.Runtime.Core
 {
         public abstract class PDFHandler : MonoBehaviour
         {
                 private string _fileName = "Comprovante";
                 private const string Extension = ".pdf";
+                
+                //#97DC23 - header green
+                //#316012 - text green
+                        
+                //#B8A260 - header yellow
+                //#4E0D2D - text yellow
         
                 private const float JumpLine = 20;
                 private const int TableWidth = 400;
@@ -33,8 +39,111 @@ namespace Pdf.Core
                 };
         
                 private readonly PdfFont _h1Font = new PdfStandardFont(PdfFontFamily.Helvetica, 20);
-                private readonly PdfFont _font10 = new PdfStandardFont(PdfFontFamily.Helvetica, 10);
-                
+                private readonly PdfFont _font10 = new PdfStandardFont(PdfFontFamily.Helvetica, 12);
+                private readonly PdfFont _fontBold = new PdfStandardFont(PdfFontFamily.Helvetica, 12, PdfFontStyle.Bold);
+
+                private PdfColor ColorHexToPdfColor(string hex)
+                {
+                        ColorUtility.TryParseHtmlString(hex, out UnityEngine.Color color);
+                        byte r = (byte)(color.r * 255);
+                        byte g = (byte)(color.g * 255);
+                        byte b = (byte)(color.b * 255);
+                        return new PdfColor(r, g, b);
+                }
+
+                private PdfPath CreateWindow(RectangleF rect, int borderRounded)
+                {
+                        PdfPath window = new PdfPath();
+                        window.AddArc(rect.X, 
+                                rect.Y, 
+                                borderRounded, 
+                                borderRounded, 
+                                180, 
+                                90); // Canto Sup esquerdo
+                        window.AddArc(
+                                rect.X + rect.Width - borderRounded, 
+                                rect.Y, 
+                                borderRounded, 
+                                borderRounded, 
+                                270, 
+                                90); // Canto Sup direito
+                        window.AddArc(
+                                rect.X + rect.Width - borderRounded, 
+                                rect.Y + rect.Height - borderRounded, 
+                                borderRounded, 
+                                borderRounded, 
+                                0, 
+                                90); // Canto Inf direito
+                        window.AddArc(
+                                rect.X, 
+                                rect.Y + rect.Height - borderRounded, 
+                                borderRounded, 
+                                borderRounded, 
+                                90, 
+                                90); // Canto Inf esquerdo
+
+                        return window;
+                }
+                public void GenerateProofFarm()
+                {
+                        PdfDocument document = new PdfDocument();
+                        PdfPage page = document.Pages.Add();
+                        PdfGraphics graphics = page.Graphics;
+                        
+                        var limitPageEnd = page.Size.Width - 80f;
+                        var columnWidth = page.Size.Width / 4;
+                        
+                        float y = 0;
+                        float x = 0;
+                        
+                        PdfBrush backgroundBrush = new PdfSolidBrush(ColorHexToPdfColor("#B8A260"));
+                        RectangleF rectTitle = new RectangleF(0, y, limitPageEnd, JumpLine);
+                        graphics.DrawPath(backgroundBrush, CreateWindow(rectTitle, 10));
+                        
+                        PdfBrush textBrush = new PdfSolidBrush(ColorHexToPdfColor("#4E0D2D"));
+                        
+                        const float paddingTop = 2f;
+                        const float paddingLeft = 10f;
+                        graphics.DrawString("Data", _fontBold, textBrush, new PointF(x + paddingLeft, y + paddingTop));
+                        graphics.DrawString("Aposta", _fontBold, textBrush, new PointF(x + columnWidth, y + paddingTop));
+                        graphics.DrawString("Saque", _fontBold, textBrush, new PointF(x + columnWidth * 2, y + paddingTop));
+                        graphics.DrawString("Multiplicador", _fontBold, textBrush, new PointF(limitPageEnd - paddingLeft, y + paddingTop), new PdfStringFormat(PdfTextAlignment.Right));
+                        
+                        y += JumpLine * 2;
+                        
+                        RectangleF rectId = new RectangleF(0, y, limitPageEnd, 100);
+                        graphics.DrawPath(backgroundBrush, CreateWindow(rectId, 10));
+                        
+                        graphics.DrawString("0", _fontBold, textBrush, new PointF(x + paddingLeft, y + paddingTop));
+                        
+                        MemoryStream stream = new MemoryStream();
+                        stream.Seek(0, SeekOrigin.Begin);
+                        document.Save(stream);
+                        stream.Position = 0;
+            
+                        document.Close(true);
+                        byte[] pdfBytes = stream.ToArray();
+#if UNITY_WEBGL && !UNITY_EDITOR
+                    using (MD5 md5 = MD5.Create())
+                    {
+                            byte[] checksumBytes = md5.ComputeHash(pdfBytes);
+                            string checksum = BitConverter.ToString(checksumBytes).Replace("-", String.Empty);
+                            Debug.Log(checksum);
+                            JsHook.DownloadHandlerPDF(_fileName + CollectDateNow() + Extension, stream.ToArray(), stream.Length);
+                    }
+#endif
+#if UNITY_EDITOR
+                        //Application.ExternalCall("GeneratePDFWebGL", pdfBytes, _fileName + CollectDateNow() + Extension);
+                        using (MD5 md5 = MD5.Create())
+                        {
+                                byte[] checksumBytes = md5.ComputeHash(pdfBytes);
+                                string checksum = BitConverter.ToString(checksumBytes).Replace("-", String.Empty);
+                                Debug.Log(checksum);
+                                File.WriteAllBytes(Application.persistentDataPath + "/" + _fileName + CollectDateNow() + Extension, stream.ToArray());
+                                System.Diagnostics.Process.Start(Application.persistentDataPath);
+                        }
+#endif
+                }
                 public void GenerateProof()
                 {
                         PdfDocument document = new PdfDocument();
